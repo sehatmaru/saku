@@ -25,7 +25,6 @@ export function AuthCard({ mode }: AuthCardProps) {
       : "Saku siap dipakai. Masuk untuk mulai mengatur uang harian."
   );
   const [loading, setLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -93,20 +92,6 @@ export function AuthCard({ mode }: AuthCardProps) {
     }
   }
 
-  async function requestPasswordReset() {
-    if (!isSupabaseConfigured || !supabase) {
-      setMessage("Reset kata sandi belum tersedia saat ini. Coba lagi nanti.");
-      return;
-    }
-
-    setResetLoading(true);
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`
-    });
-    setMessage("Jika email terdaftar, tautan reset akan dikirim. Silakan cek inbox.");
-    setResetLoading(false);
-  }
-
   return (
     <Card className="w-full max-w-md overflow-hidden border-zinc-950 bg-card/88 dark:border-white/10">
       <div className="border-b border-zinc-950 bg-zinc-950 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.24em] text-lime-300 dark:border-white/10">
@@ -165,14 +150,9 @@ export function AuthCard({ mode }: AuthCardProps) {
           </Badge>
           <div className="flex items-center gap-3">
             {mode === "login" && (
-              <button
-                type="button"
-                className="font-medium text-muted-foreground hover:text-primary hover:underline"
-                onClick={requestPasswordReset}
-                disabled={resetLoading}
-              >
-                {resetLoading ? "Mengirim..." : "Lupa kata sandi"}
-              </button>
+              <Link className="font-medium text-muted-foreground hover:text-primary hover:underline" href="/forgot-password">
+                Lupa kata sandi
+              </Link>
             )}
             <Link className="font-medium text-primary hover:underline" href={mode === "login" ? "/register" : "/login"}>
               {mode === "login" ? "Buat akun" : "Sudah punya akun"}
