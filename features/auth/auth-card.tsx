@@ -15,6 +15,32 @@ type AuthCardProps = {
   mode: "login" | "register";
 };
 
+function getAuthErrorMessage(error: { message?: string; status?: number }, mode: AuthCardProps["mode"]) {
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (error.status === 429 || message.includes("rate limit")) {
+    return "Terlalu banyak percobaan akun dalam waktu singkat. Tunggu beberapa menit, lalu coba lagi.";
+  }
+
+  if (mode === "register") {
+    if (message.includes("already registered") || message.includes("already exists")) {
+      return "Email ini sudah terdaftar. Masuk dengan akun tersebut atau gunakan lupa kata sandi.";
+    }
+
+    if (message.includes("password")) {
+      return "Gunakan kata sandi minimal 8 karakter agar akun bisa dibuat.";
+    }
+
+    return "Registrasi belum berhasil. Periksa email dan kata sandi.";
+  }
+
+  if (message.includes("invalid login") || message.includes("invalid credentials")) {
+    return "Email atau kata sandi belum cocok. Periksa lagi, lalu coba masuk.";
+  }
+
+  return "Autentikasi belum berhasil. Coba beberapa saat lagi.";
+}
+
 export function AuthCard({ mode }: AuthCardProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -78,7 +104,7 @@ export function AuthCard({ mode }: AuthCardProps) {
             });
 
       if (result.error) {
-        setMessage("Autentikasi belum berhasil. Periksa email dan kata sandi.");
+        setMessage(getAuthErrorMessage(result.error, mode));
       } else if (mode === "login" || result.data.session) {
         setMessage("Masuk berhasil. Membuka beranda...");
         router.replace("/");

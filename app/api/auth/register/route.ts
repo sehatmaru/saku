@@ -7,6 +7,20 @@ const registerSchema = z.object({
   password: z.string().min(8)
 });
 
+function getRegisterErrorMessage(error: { message?: string; status?: number }) {
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (error.status === 429 || message.includes("rate limit")) {
+    return "Terlalu banyak percobaan akun dalam waktu singkat. Tunggu beberapa menit, lalu coba lagi.";
+  }
+
+  if (message.includes("already registered") || message.includes("already exists")) {
+    return "Email ini sudah terdaftar. Masuk dengan akun tersebut atau gunakan lupa kata sandi.";
+  }
+
+  return "Registrasi belum berhasil. Periksa email dan kata sandi.";
+}
+
 export async function POST(request: NextRequest) {
   const parsed = registerSchema.safeParse(await request.json());
 
@@ -31,7 +45,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.json({ success: false, error: "Register failed" }, { status: 400 });
+    return NextResponse.json({ success: false, error: getRegisterErrorMessage(error) }, { status: error.status ?? 400 });
   }
 
   return NextResponse.json({ success: true }, { status: 201 });
