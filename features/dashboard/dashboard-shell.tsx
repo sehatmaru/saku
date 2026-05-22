@@ -571,113 +571,117 @@ export function DashboardShell() {
           </header>
 
           <div className="mx-auto w-full max-w-7xl space-y-5 p-4 md:p-6">
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-white/70 bg-card/78 p-3 text-sm font-semibold text-card-foreground shadow-soft backdrop-blur-xl dark:border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/16 text-primary">
-                  {dataLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-                </span>
-                <span>{toast}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={remoteReady ? "success" : "warning"}>
-                  {remoteReady ? "Tersinkron" : "Data aktif"}
-                </Badge>
-                <Badge variant={metrics.budgetUsage > 80 ? "warning" : "success"}>
-                  Budget {metrics.budgetUsage}%
-                </Badge>
-              </div>
-            </div>
-
-            <section className="grid gap-4 xl:grid-cols-[1.4fr_0.6fr]">
-              <div className="overflow-hidden rounded-lg border border-zinc-950 bg-zinc-950 text-white shadow-pop dark:border-white/10">
-                <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:p-6">
-                  <div className="max-w-2xl">
-                    <Badge className="bg-lime-300 text-zinc-950">Cek arus uang</Badge>
-                    <h2 className="mt-4 text-3xl font-extrabold leading-tight tracking-normal md:text-4xl">
-                      Uang masuk rapi, pengeluaran tetap kebaca.
-                    </h2>
-                    <p className="mt-3 max-w-xl text-sm font-medium text-zinc-300">
-                      Saku ngerangkum transaksi, budget, dan input WhatsApp dalam satu tempat yang cepat dipakai.
-                    </p>
+            {activeView === "dashboard" && (
+              <>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/70 bg-card/78 p-3 text-sm font-semibold text-card-foreground shadow-soft backdrop-blur-xl dark:border-white/10">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/16 text-primary">
+                      {dataLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                    </span>
+                    <span>{toast}</span>
                   </div>
-                  <div className="grid min-w-52 content-center gap-3">
-                    <div className="rounded-lg border border-white/10 bg-white/10 p-4">
-                      <div className="flex items-center gap-2 text-sm font-bold text-lime-200">
-                        <TrendingUp className="h-4 w-4" />
-                        Sisa aman
-                      </div>
-                      <p className="mt-2 text-2xl font-extrabold">{formatCurrency(metrics.saving)}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-lime-300 p-3 text-zinc-950">
-                        <p className="text-xs font-bold uppercase tracking-wider">Pemasukan</p>
-                        <p className="mt-1 font-extrabold">{formatCompactCurrency(metrics.income)}</p>
-                      </div>
-                      <div className="rounded-lg bg-cyan-300 p-3 text-zinc-950">
-                        <p className="text-xs font-bold uppercase tracking-wider">Pengeluaran</p>
-                        <p className="mt-1 font-extrabold">{formatCompactCurrency(metrics.expense)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 border-t border-white/10 bg-white/[0.06] px-5 py-3 text-xs font-extrabold uppercase tracking-[0.2em] text-zinc-300 md:flex md:items-center md:gap-4 md:tracking-[0.24em]">
-                  <span>Catat manual</span>
-                  <span className="text-lime-300">Pantau budget</span>
-                  <span>Baca WhatsApp</span>
-                  <span className="text-cyan-300">Ringkasan cepat</span>
-                </div>
-              </div>
-
-              <Card className="border-accent/35 bg-accent/12">
-                <CardHeader>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <CardTitle>Sinyal pengeluaran</CardTitle>
-                  <CardDescription>Budget terpakai masih di zona aman bulan ini.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-end justify-between gap-3">
-                    <p className="text-4xl font-extrabold">{metrics.budgetUsage}%</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={remoteReady ? "success" : "warning"}>
+                      {remoteReady ? "Tersinkron" : "Data aktif"}
+                    </Badge>
                     <Badge variant={metrics.budgetUsage > 80 ? "warning" : "success"}>
-                      {metrics.budgetUsage > 80 ? "Perlu rem" : "Aman"}
+                      Budget {metrics.budgetUsage}%
                     </Badge>
                   </div>
-                  <Progress value={metrics.budgetUsage} className="mt-4 h-3" />
-                </CardContent>
-              </Card>
-            </section>
+                </div>
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                title="Pemasukan"
-                value={formatCurrency(metrics.income)}
-                helper="+12% dari periode lalu"
-                icon={ArrowUpCircle}
-                tone="lime"
-              />
-              <MetricCard
-                title="Pengeluaran"
-                value={formatCurrency(metrics.expense)}
-                helper="Termasuk input WhatsApp"
-                icon={ArrowDownCircle}
-                tone="cyan"
-              />
-              <MetricCard
-                title="Sisa Bersih"
-                value={formatCurrency(metrics.saving)}
-                helper={metrics.saving >= 0 ? "Arus uang positif" : "Perlu evaluasi"}
-                icon={WalletCards}
-                tone="coral"
-              />
-              <MetricCard
-                title="Budget Terpakai"
-                value={`${metrics.budgetUsage}%`}
-                helper={formatCurrency(metrics.budgetTotal)}
-                icon={PiggyBank}
-                tone="pink"
-              />
-            </section>
+                <section className="grid gap-4 xl:grid-cols-[1.4fr_0.6fr]">
+                  <div className="overflow-hidden rounded-lg border border-zinc-950 bg-zinc-950 text-white shadow-pop dark:border-white/10">
+                    <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:p-6">
+                      <div className="max-w-2xl">
+                        <Badge className="bg-lime-300 text-zinc-950">Cek arus uang</Badge>
+                        <h2 className="mt-4 text-3xl font-extrabold leading-tight tracking-normal md:text-4xl">
+                          Uang masuk rapi, pengeluaran tetap kebaca.
+                        </h2>
+                        <p className="mt-3 max-w-xl text-sm font-medium text-zinc-300">
+                          Saku ngerangkum transaksi, budget, dan input WhatsApp dalam satu tempat yang cepat dipakai.
+                        </p>
+                      </div>
+                      <div className="grid min-w-52 content-center gap-3">
+                        <div className="rounded-lg border border-white/10 bg-white/10 p-4">
+                          <div className="flex items-center gap-2 text-sm font-bold text-lime-200">
+                            <TrendingUp className="h-4 w-4" />
+                            Sisa aman
+                          </div>
+                          <p className="mt-2 text-2xl font-extrabold">{formatCurrency(metrics.saving)}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-lime-300 p-3 text-zinc-950">
+                            <p className="text-xs font-bold uppercase tracking-wider">Pemasukan</p>
+                            <p className="mt-1 font-extrabold">{formatCompactCurrency(metrics.income)}</p>
+                          </div>
+                          <div className="rounded-lg bg-cyan-300 p-3 text-zinc-950">
+                            <p className="text-xs font-bold uppercase tracking-wider">Pengeluaran</p>
+                            <p className="mt-1 font-extrabold">{formatCompactCurrency(metrics.expense)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 border-t border-white/10 bg-white/[0.06] px-5 py-3 text-xs font-extrabold uppercase tracking-[0.2em] text-zinc-300 md:flex md:items-center md:gap-4 md:tracking-[0.24em]">
+                      <span>Catat manual</span>
+                      <span className="text-lime-300">Pantau budget</span>
+                      <span>Baca WhatsApp</span>
+                      <span className="text-cyan-300">Ringkasan cepat</span>
+                    </div>
+                  </div>
+
+                  <Card className="border-accent/35 bg-accent/12">
+                    <CardHeader>
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <CardTitle>Sinyal pengeluaran</CardTitle>
+                      <CardDescription>Budget terpakai masih di zona aman bulan ini.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-end justify-between gap-3">
+                        <p className="text-4xl font-extrabold">{metrics.budgetUsage}%</p>
+                        <Badge variant={metrics.budgetUsage > 80 ? "warning" : "success"}>
+                          {metrics.budgetUsage > 80 ? "Perlu rem" : "Aman"}
+                        </Badge>
+                      </div>
+                      <Progress value={metrics.budgetUsage} className="mt-4 h-3" />
+                    </CardContent>
+                  </Card>
+                </section>
+
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard
+                    title="Pemasukan"
+                    value={formatCurrency(metrics.income)}
+                    helper="+12% dari periode lalu"
+                    icon={ArrowUpCircle}
+                    tone="lime"
+                  />
+                  <MetricCard
+                    title="Pengeluaran"
+                    value={formatCurrency(metrics.expense)}
+                    helper="Termasuk input WhatsApp"
+                    icon={ArrowDownCircle}
+                    tone="cyan"
+                  />
+                  <MetricCard
+                    title="Sisa Bersih"
+                    value={formatCurrency(metrics.saving)}
+                    helper={metrics.saving >= 0 ? "Arus uang positif" : "Perlu evaluasi"}
+                    icon={WalletCards}
+                    tone="coral"
+                  />
+                  <MetricCard
+                    title="Budget Terpakai"
+                    value={`${metrics.budgetUsage}%`}
+                    helper={formatCurrency(metrics.budgetTotal)}
+                    icon={PiggyBank}
+                    tone="pink"
+                  />
+                </section>
+              </>
+            )}
 
             {(activeView === "dashboard" || activeView === "analytics") && (
               <section className="grid gap-4 xl:grid-cols-[1.4fr_0.9fr]">
