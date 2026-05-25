@@ -28,11 +28,13 @@ export function formatCompactCurrency(value: number) {
 }
 
 export function formatDate(value: string) {
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "Tanggal tidak valid";
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric"
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatShortNumber(value: number) {

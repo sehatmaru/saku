@@ -33,8 +33,9 @@ export async function POST(request: NextRequest) {
   try {
     client = createRouteSupabaseClient(request);
   } catch (error) {
+    console.error("Supabase client init failed:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Layanan akun belum siap." },
+      { success: false, error: "Layanan akun belum siap." },
       { status: 503 }
     );
   }

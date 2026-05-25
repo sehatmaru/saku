@@ -118,7 +118,7 @@ export async function createTransaction(userId: string, input: TransactionInput)
   if (error) throw error;
 }
 
-export async function updateTransaction(id: string, input: TransactionInput) {
+export async function updateTransaction(userId: string, id: string, input: TransactionInput) {
   const client = requireSupabase();
   const { error } = await client
     .from("transactions")
@@ -130,14 +130,15 @@ export async function updateTransaction(id: string, input: TransactionInput) {
       transaction_date: input.transactionDate,
       source: input.source ?? "manual"
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
 
-export async function softDeleteTransaction(id: string) {
+export async function softDeleteTransaction(userId: string, id: string) {
   const client = requireSupabase();
-  const { error } = await client.from("transactions").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  const { error } = await client.from("transactions").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -154,7 +155,7 @@ export async function createBudget(userId: string, input: BudgetInput) {
   if (error) throw error;
 }
 
-export async function updateBudget(id: string, input: BudgetInput) {
+export async function updateBudget(userId: string, id: string, input: BudgetInput) {
   const client = requireSupabase();
   const { error } = await client
     .from("budgets")
@@ -163,14 +164,15 @@ export async function updateBudget(id: string, input: BudgetInput) {
       amount: input.amount,
       period: input.period
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
 
-export async function archiveBudget(id: string) {
+export async function archiveBudget(userId: string, id: string) {
   const client = requireSupabase();
-  const { error } = await client.from("budgets").update({ archived_at: new Date().toISOString() }).eq("id", id);
+  const { error } = await client.from("budgets").update({ archived_at: new Date().toISOString() }).eq("id", id).eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -200,7 +202,22 @@ export async function upsertRemoteCategory(userId: string, name: string, type: T
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") {
+      const { data: retryData, error: retryError } = await client
+        .from("categories")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("type", type)
+        .ilike("name", normalizedName)
+        .maybeSingle();
+
+      if (retryError || !retryData) throw error;
+      return mapCategory(retryData as DbCategory);
+    }
+
+    throw error;
+  }
   return mapCategory(data as DbCategory);
 }
 

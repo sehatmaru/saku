@@ -35,9 +35,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Silakan login ulang." }, { status: 401 });
   }
 
+  let categoryId: string | undefined;
+
   const existingCategory = await client
     .from("categories")
-    .select("*")
+    .select("id")
     .eq("user_id", user.id)
     .eq("type", parsedMessage.type)
     .ilike("name", parsedMessage.categoryName)
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Kategori belum bisa dicek." }, { status: 500 });
   }
 
-  let categoryId = existingCategory.data?.id as string | undefined;
+  categoryId = existingCategory.data?.id;
 
   if (!categoryId) {
     const { data, error } = await client
@@ -62,10 +64,26 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ success: false, error: "Kategori belum bisa disimpan." }, { status: 500 });
-    }
+      if (error.code === "23505") {
+        const { data: retryData, error: retryError } = await client
+          .from("categories")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("type", parsedMessage.type)
+          .ilike("name", parsedMessage.categoryName)
+          .maybeSingle();
 
-    categoryId = data.id;
+        if (retryError || !retryData) {
+          return NextResponse.json({ success: false, error: "Kategori belum bisa disimpan." }, { status: 500 });
+        }
+
+        categoryId = retryData.id;
+      } else {
+        return NextResponse.json({ success: false, error: "Kategori belum bisa disimpan." }, { status: 500 });
+      }
+    } else {
+      categoryId = data.id;
+    }
   }
 
   const { data, error } = await client

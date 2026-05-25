@@ -154,7 +154,7 @@ export function DashboardShell() {
         });
         setToast("Data Saku tersinkron.");
       } catch (error) {
-        console.error(error);
+        if (process.env.NODE_ENV === "development") console.error(error);
         setToast("Gagal memuat data Saku. Coba beberapa saat lagi.");
       } finally {
         setDataLoading(false);
@@ -292,7 +292,7 @@ export function DashboardShell() {
     try {
       if (remoteReady && user) {
         if (form.id) {
-          await updateRemoteTransaction(form.id, payload);
+          await updateRemoteTransaction(user.id, form.id, payload);
           setToast("Transaksi diperbarui.");
         } else {
           await createRemoteTransaction(user.id, payload);
@@ -309,7 +309,7 @@ export function DashboardShell() {
 
       setForm(emptyForm);
     } catch (error) {
-      console.error(error);
+      if (process.env.NODE_ENV === "development") console.error(error);
       setToast("Transaksi gagal disimpan. Coba beberapa saat lagi.");
     } finally {
       setActionLoading(false);
@@ -348,7 +348,7 @@ export function DashboardShell() {
     try {
       if (remoteReady && user) {
         if (budgetDraft.id) {
-          await updateRemoteBudget(budgetDraft.id, payload);
+          await updateRemoteBudget(user.id, budgetDraft.id, payload);
           setToast("Budget diperbarui.");
         } else {
           await createRemoteBudget(user.id, payload);
@@ -364,7 +364,7 @@ export function DashboardShell() {
       }
       setBudgetDraft({ ...emptyBudgetDraft, categoryId: budgetDraft.categoryId });
     } catch (error) {
-      console.error(error);
+      if (process.env.NODE_ENV === "development") console.error(error);
       setToast("Budget gagal disimpan. Coba beberapa saat lagi.");
     } finally {
       setActionLoading(false);
@@ -406,7 +406,7 @@ export function DashboardShell() {
         setToast("Input WhatsApp berhasil dibuat menjadi transaksi.");
       }
     } catch (error) {
-      console.error(error);
+      if (process.env.NODE_ENV === "development") console.error(error);
       setToast("Input WhatsApp gagal disimpan. Coba beberapa saat lagi.");
     } finally {
       setActionLoading(false);
@@ -435,7 +435,7 @@ export function DashboardShell() {
       }
       setCategoryDraft({ ...categoryDraft, name: "" });
     } catch (error) {
-      console.error(error);
+      if (process.env.NODE_ENV === "development") console.error(error);
       setToast("Kategori gagal disimpan. Coba beberapa saat lagi.");
     } finally {
       setActionLoading(false);
@@ -448,7 +448,7 @@ export function DashboardShell() {
     setActionLoading(true);
     try {
       if (remoteReady && user) {
-        await softDeleteTransaction(id);
+        await softDeleteTransaction(user.id, id);
         await refreshFinance(user.id);
         setToast("Transaksi dihapus.");
       } else {
@@ -456,7 +456,7 @@ export function DashboardShell() {
         setToast("Transaksi dihapus.");
       }
     } catch (error) {
-      console.error(error);
+      if (process.env.NODE_ENV === "development") console.error(error);
       setToast("Transaksi gagal dihapus. Coba beberapa saat lagi.");
     } finally {
       setActionLoading(false);
@@ -469,7 +469,7 @@ export function DashboardShell() {
     setActionLoading(true);
     try {
       if (remoteReady && user) {
-        await archiveRemoteBudget(id);
+        await archiveRemoteBudget(user.id, id);
         await refreshFinance(user.id);
         setToast("Budget diarsipkan.");
       } else {
@@ -477,7 +477,7 @@ export function DashboardShell() {
         setToast("Budget diarsipkan.");
       }
     } catch (error) {
-      console.error(error);
+      if (process.env.NODE_ENV === "development") console.error(error);
       setToast("Budget gagal diarsipkan. Coba beberapa saat lagi.");
     } finally {
       setActionLoading(false);
