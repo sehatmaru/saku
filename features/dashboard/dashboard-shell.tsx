@@ -1,19 +1,6 @@
 "use client";
 
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Pie, PieChart, XAxis, YAxis } from "recharts";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -41,7 +28,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +59,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@/components/ui/tooltip";
+import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { formatCompactCurrency, formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -101,6 +89,43 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
 ];
 
 const chartColors = ["#21e58f", "#22d3ee", "#ffb020", "#ff6b4a", "#a3e635", "#f472b6"];
+
+const trendChartConfig = {
+  income: { label: "Pemasukan", color: "#21e58f" },
+  expense: { label: "Pengeluaran", color: "#22d3ee" }
+} satisfies ChartConfig;
+
+const barChartConfig = {
+  value: { label: "Pengeluaran", color: "#21e58f" }
+} satisfies ChartConfig;
+
+function SakuChartTooltip({ active, payload, label, config }: {
+  active?: boolean;
+  payload?: ReadonlyArray<{ name?: string | number; value?: unknown; color?: string }>;
+  label?: string | number;
+  config: ChartConfig;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="grid min-w-36 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+      {label && <div className="font-medium">{label}</div>}
+      <div className="grid gap-1.5">
+        {payload.map((entry, i) => {
+          const key = String(entry.name ?? "");
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <div className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: entry.color ?? "currentColor" }} />
+              <span className="text-muted-foreground">{config[key]?.label ?? key}</span>
+              <span className="ml-auto font-mono font-medium tabular-nums">
+                {formatCurrency(Number(entry.value))}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const emptyForm = {
   id: "",
@@ -286,24 +311,63 @@ export function DashboardShell() {
           .filter((transaction) => transaction.categoryId === category.id && transaction.type === "expense")
           .reduce((total, transaction) => total + transaction.amount, 0)
       }))
-      .filter((item) => item.value > 0);
+      .filter((item) => item.value > 0)
+      .map((item, index) => ({ ...item, fill: chartColors[index % chartColors.length] }));
   }, [categories, transactions]);
 
   const trendData = useMemo(() => {
-    const days = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-    return days.map((day, index) => {
-      const dayTransactions = transactions.filter((_, transactionIndex) => transactionIndex % 7 === index);
+    const now = new Date();
+
+    if (activePeriod === "week") {
+      const dow = now.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+
+      const labels = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+      return labels.map((label, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dateStr = d.toISOString().slice(0, 10);
+        const day = transactions.filter((t) => t.transactionDate === dateStr);
+        return {
+          day: label,
+          income: day.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+          expense: day.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+        };
+      });
+    }
+
+    if (activePeriod === "month") {
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const prefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const dateStr = `${prefix}-${String(i + 1).padStart(2, "0")}`;
+        const day = transactions.filter((t) => t.transactionDate === dateStr);
+        return {
+          day: String(i + 1),
+          income: day.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+          expense: day.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+        };
+      });
+    }
+
+    const year = now.getFullYear();
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    return months.map((label, i) => {
+      const prefix = `${year}-${String(i + 1).padStart(2, "0")}`;
+      const month = transactions.filter((t) => t.transactionDate.startsWith(prefix));
       return {
-        day,
-        income: dayTransactions
-          .filter((transaction) => transaction.type === "income")
-          .reduce((total, transaction) => total + transaction.amount, 0),
-        expense: dayTransactions
-          .filter((transaction) => transaction.type === "expense")
-          .reduce((total, transaction) => total + transaction.amount, 0)
+        day: label,
+        income: month.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+        expense: month.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
       };
     });
-  }, [transactions]);
+  }, [transactions, activePeriod]);
 
   const parsedMessage = useMemo(() => parseWhatsAppMessage(whatsAppText), [whatsAppText]);
 
@@ -354,7 +418,6 @@ export function DashboardShell() {
   }
 
   function editTransaction(transaction: Transaction) {
-    setActiveView("transactions");
     setForm({
       id: transaction.id,
       type: transaction.type,
@@ -755,26 +818,26 @@ export function DashboardShell() {
                     <PeriodSwitch activePeriod={activePeriod} onChange={setActivePeriod} />
                   </CardHeader>
                   <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer config={trendChartConfig} className="h-full w-full">
                       <AreaChart data={trendData}>
                         <defs>
                           <linearGradient id="income" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="5%" stopColor="#21e58f" stopOpacity={0.42} />
-                            <stop offset="95%" stopColor="#21e58f" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.42} />
+                            <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="expense" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.34} />
-                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.34} />
+                            <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
-                        <YAxis tickFormatter={formatCompactCurrency} stroke="hsl(var(--muted-foreground))" />
-                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                        <Area dataKey="income" stroke="#21e58f" fill="url(#income)" strokeWidth={3} />
-                        <Area dataKey="expense" stroke="#22d3ee" fill="url(#expense)" strokeWidth={3} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                        <YAxis tickFormatter={formatCompactCurrency} tickLine={false} axisLine={false} />
+                        <ChartTooltip content={(props) => <SakuChartTooltip {...props} config={trendChartConfig} />} />
+                        <Area dataKey="income" stroke="var(--color-income)" fill="url(#income)" strokeWidth={2.5} />
+                        <Area dataKey="expense" stroke="var(--color-expense)" fill="url(#expense)" strokeWidth={2.5} />
                       </AreaChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                   </CardContent>
                 </Card>
 
@@ -784,7 +847,7 @@ export function DashboardShell() {
                     <CardDescription>Komposisi pengeluaran aktif.</CardDescription>
                   </CardHeader>
                   <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer config={{}} className="h-full w-full">
                       <PieChart>
                         <Pie
                           data={categoryExpenseData}
@@ -793,35 +856,22 @@ export function DashboardShell() {
                           innerRadius={64}
                           outerRadius={104}
                           paddingAngle={3}
-                        >
-                          {categoryExpenseData.map((entry, index) => (
-                            <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                        />
+                        <ChartTooltip content={(props) => <SakuChartTooltip {...props} config={{}} />} />
                       </PieChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                   </CardContent>
                 </Card>
               </section>
             )}
 
             {(activeView === "dashboard" || activeView === "transactions") && (
-              <section className="grid gap-4 xl:grid-cols-[0.85fr_1.25fr]">
-                <TransactionForm
-                  categories={categories}
-                  form={form}
-                  onChange={setForm}
-                  onSubmit={submitTransaction}
-                  loading={actionLoading}
-                />
-                <TransactionList
-                  transactions={transactions}
-                  categoryById={categoryById}
-                  onEdit={editTransaction}
-                  onDelete={removeTransaction}
-                />
-              </section>
+              <TransactionList
+                transactions={transactions}
+                categoryById={categoryById}
+                onEdit={editTransaction}
+                onDelete={removeTransaction}
+              />
             )}
 
             {(activeView === "dashboard" || activeView === "transactions") && (
@@ -860,15 +910,15 @@ export function DashboardShell() {
                   <CardDescription>Nilai pengeluaran per kategori untuk membaca pola belanja.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartContainer config={barChartConfig} className="h-full w-full">
                     <BarChart data={categoryExpenseData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tickFormatter={formatCompactCurrency} stroke="hsl(var(--muted-foreground))" />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Bar dataKey="value" fill="#21e58f" radius={[8, 8, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                      <YAxis tickFormatter={formatCompactCurrency} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={(props) => <SakuChartTooltip {...props} config={barChartConfig} />} />
+                      <Bar dataKey="value" fill="var(--color-value)" radius={[8, 8, 0, 0]} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
               </Card>
             )}
@@ -882,9 +932,27 @@ export function DashboardShell() {
                 loading={actionLoading}
               />
             )}
+
+            <div className="lg:hidden">
+              <TransactionForm
+                categories={categories}
+                form={form}
+                onChange={setForm}
+                onSubmit={submitTransaction}
+                loading={actionLoading}
+              />
+            </div>
           </div>
         </section>
       </div>
+
+      <FloatingTransactionPanel
+        categories={categories}
+        form={form}
+        onChange={setForm}
+        onSubmit={submitTransaction}
+        loading={actionLoading}
+      />
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t border-white/10 bg-zinc-950 px-2 py-2 text-white shadow-2xl lg:hidden">
         {navigation.map((item) => {
@@ -1017,6 +1085,123 @@ function TransactionForm({
   form,
   onChange,
   onSubmit,
+  loading,
+  bare = false
+}: {
+  categories: ReturnType<typeof useFinanceStore.getState>["categories"];
+  form: typeof emptyForm;
+  onChange: (form: typeof emptyForm) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  loading: boolean;
+  bare?: boolean;
+}) {
+  const filteredCategories = categories.filter((category) => category.type === form.type);
+
+  const formContent = (
+    <form className="space-y-4" onSubmit={onSubmit}>
+      <div className="grid grid-cols-2 gap-2">
+        {(["expense", "income"] as const).map((type) => (
+          <button
+            key={type}
+            type="button"
+            className={cn(
+              "flex h-11 items-center justify-center gap-2 rounded-md border bg-background/60 text-sm font-extrabold transition-all hover:-translate-y-0.5",
+              form.type === type &&
+                "border-zinc-950 bg-zinc-950 text-lime-200 shadow-pop dark:border-lime-300 dark:bg-lime-300 dark:text-zinc-950"
+            )}
+            onClick={() =>
+              onChange({
+                ...form,
+                type,
+                categoryId: categories.find((category) => category.type === type)?.id ?? form.categoryId
+              })
+            }
+          >
+            {type === "expense" ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowUpCircle className="h-4 w-4" />}
+            {type === "expense" ? "Keluar" : "Masuk"}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="amount">Nominal</Label>
+        <Input
+          id="amount"
+          inputMode="numeric"
+          type="number"
+          min="1"
+          placeholder="100000"
+          value={form.amount}
+          onChange={(event) => onChange({ ...form, amount: event.target.value })}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="date">Tanggal</Label>
+        <Input
+          id="date"
+          type="date"
+          value={form.transactionDate}
+          onChange={(event) => onChange({ ...form, transactionDate: event.target.value })}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Kategori</Label>
+        <Select
+          value={form.categoryId}
+          onValueChange={(value) => onChange({ ...form, categoryId: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih kategori" />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredCategories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="notes">Catatan</Label>
+        <Input
+          id="notes"
+          placeholder="Makan siang, invoice, tagihan..."
+          value={form.notes}
+          onChange={(event) => onChange({ ...form, notes: event.target.value })}
+        />
+      </div>
+
+      <Button className="w-full" disabled={loading}>
+        {loading ? "Menyimpan..." : form.id ? "Simpan perubahan" : "Tambah transaksi"}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+      </Button>
+    </form>
+  );
+
+  if (bare) return formContent;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{form.id ? "Edit transaksi" : "Tambah transaksi"}</CardTitle>
+        <CardDescription>Catat pemasukan atau pengeluaran dengan validasi dasar.</CardDescription>
+      </CardHeader>
+      <CardContent>{formContent}</CardContent>
+    </Card>
+  );
+}
+
+function FloatingTransactionPanel({
+  categories,
+  form,
+  onChange,
+  onSubmit,
   loading
 }: {
   categories: ReturnType<typeof useFinanceStore.getState>["categories"];
@@ -1025,102 +1210,95 @@ function TransactionForm({
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   loading: boolean;
 }) {
-  const filteredCategories = categories.filter((category) => category.type === form.type);
+  const [minimized, setMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 80 });
+  const [isDragging, setIsDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setPosition({ x: window.innerWidth - 336, y: 80 });
+  }, []);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    function onMouseMove(e: MouseEvent) {
+      const w = panelRef.current?.offsetWidth ?? 320;
+      const h = panelRef.current?.offsetHeight ?? 48;
+      setPosition({
+        x: Math.max(0, Math.min(window.innerWidth - w, e.clientX - dragOffset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - h, e.clientY - dragOffset.current.y))
+      });
+    }
+
+    function onMouseUp() {
+      setIsDragging(false);
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging]);
+
+  function onHeaderMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    dragOffset.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+    setIsDragging(true);
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{form.id ? "Edit transaksi" : "Tambah transaksi"}</CardTitle>
-        <CardDescription>Catat pemasukan atau pengeluaran dengan validasi dasar.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <div className="grid grid-cols-2 gap-2">
-            {(["expense", "income"] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={cn(
-                  "flex h-11 items-center justify-center gap-2 rounded-md border bg-background/60 text-sm font-extrabold transition-all hover:-translate-y-0.5",
-                  form.type === type &&
-                    "border-zinc-950 bg-zinc-950 text-lime-200 shadow-pop dark:border-lime-300 dark:bg-lime-300 dark:text-zinc-950"
-                )}
-                onClick={() =>
-                  onChange({
-                    ...form,
-                    type,
-                    categoryId: categories.find((category) => category.type === type)?.id ?? form.categoryId
-                  })
-                }
-              >
-                {type === "expense" ? <ArrowDownCircle className="h-4 w-4" /> : <ArrowUpCircle className="h-4 w-4" />}
-                {type === "expense" ? "Keluar" : "Masuk"}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Nominal</Label>
-              <Input
-                id="amount"
-                inputMode="numeric"
-                type="number"
-                min="1"
-                placeholder="100000"
-                value={form.amount}
-                onChange={(event) => onChange({ ...form, amount: event.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Tanggal</Label>
-              <Input
-                id="date"
-                type="date"
-                value={form.transactionDate}
-                onChange={(event) => onChange({ ...form, transactionDate: event.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Kategori</Label>
-            <Select
-              value={form.categoryId}
-              onValueChange={(value) => onChange({ ...form, categoryId: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Catatan</Label>
-            <Input
-              id="notes"
-              placeholder="Makan siang, invoice, tagihan..."
-              value={form.notes}
-              onChange={(event) => onChange({ ...form, notes: event.target.value })}
-            />
-          </div>
-
-          <Button className="w-full" disabled={loading}>
-            {loading ? "Menyimpan..." : form.id ? "Simpan perubahan" : "Tambah transaksi"}
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <div
+      ref={panelRef}
+      className={cn(
+        "fixed z-10 hidden flex-col rounded-2xl border border-white/70 bg-card/92 backdrop-blur-2xl dark:border-white/10 lg:flex transition-[width] duration-300",
+        minimized ? "w-96" : "w-80",
+        isDragging
+          ? "cursor-grabbing select-none shadow-[0_24px_64px_rgba(0,0,0,0.18),0_4px_12px_rgba(0,0,0,0.10)]"
+          : minimized
+          ? "[animation:glow-lime_2s_ease-in-out_infinite]"
+          : "shadow-[0_8px_40px_rgba(0,0,0,0.10),0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.45)] [animation:float_5s_ease-in-out_infinite] hover:[animation-play-state:paused] focus-within:[animation-play-state:paused]"
+      )}
+      style={{ left: position.x, top: position.y }}
+    >
+      <div
+        className={cn(
+          "relative flex shrink-0 select-none items-center justify-between overflow-hidden bg-zinc-950 px-5 text-xs font-extrabold uppercase tracking-[0.24em] text-lime-300",
+          minimized ? "py-4 rounded-2xl" : "py-3 rounded-t-2xl",
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        )}
+        onMouseDown={onHeaderMouseDown}
+      >
+        {minimized && !isDragging && (
+          <div className="pointer-events-none absolute inset-0 [animation:shimmer_2.5s_ease-in-out_infinite_0.6s] bg-gradient-to-r from-transparent via-lime-300/25 to-transparent" />
+        )}
+        <span>{form.id ? "Edit transaksi" : "Catat transaksi"}</span>
+        <button
+          type="button"
+          aria-label={minimized ? "Perluas" : "Perkecil"}
+          onClick={() => setMinimized((v) => !v)}
+          className="rounded p-0.5 text-lime-300/60 transition-colors hover:text-lime-300"
+        >
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", minimized && "rotate-180")} />
+        </button>
+      </div>
+      {!minimized && (
+        <div className="overflow-y-auto p-4">
+          <TransactionForm
+            categories={categories}
+            form={form}
+            onChange={onChange}
+            onSubmit={onSubmit}
+            loading={loading}
+            bare
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

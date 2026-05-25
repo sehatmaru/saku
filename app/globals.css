@@ -130,3 +130,33 @@
     background-size: 9px 9px;
   }
 }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes tring {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  55% { transform: rotate(14deg); }
+  60% { transform: rotate(-11deg); }
+  65% { transform: rotate(8deg); }
+  70% { transform: rotate(-6deg); }
+  75% { transform: rotate(4deg); }
+  80% { transform: rotate(-2deg); }
+  85% { transform: rotate(0deg); }
+}
+
+@keyframes glow-lime {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(132, 204, 22, 0.35), 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+  50% {
+    box-shadow: 0 4px 36px rgba(132, 204, 22, 0.85), 0 0 0 3px rgba(132, 204, 22, 0.28), 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-150%) skewX(-12deg); }
+  55%, 100% { transform: translateX(320%) skewX(-12deg); }
+}
