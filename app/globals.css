@@ -1,3 +1,5 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,6 +10,8 @@
     --foreground: 230 24% 10%;
     --card: 0 0% 100%;
     --card-foreground: 230 24% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 24% 10%;
     --primary: 158 84% 43%;
     --primary-foreground: 162 88% 7%;
     --secondary: 171 64% 92%;
@@ -23,6 +27,11 @@
     --ring: 158 84% 43%;
     --radius: 0.5rem;
     color-scheme: light;
+    --chart-1: 158 84% 43%;
+    --chart-2: 191 91% 52%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 271 76% 53%;
   }
 
   .dark {
@@ -30,6 +39,8 @@
     --foreground: 160 40% 98%;
     --card: 240 9% 11%;
     --card-foreground: 160 40% 98%;
+    --popover: 240 9% 11%;
+    --popover-foreground: 160 40% 98%;
     --primary: 156 94% 54%;
     --primary-foreground: 158 92% 8%;
     --secondary: 240 8% 17%;
@@ -44,10 +55,15 @@
     --input: 240 7% 24%;
     --ring: 156 94% 54%;
     color-scheme: dark;
+    --chart-1: 156 94% 54%;
+    --chart-2: 191 91% 60%;
+    --chart-3: 38 92% 58%;
+    --chart-4: 0 72% 58%;
+    --chart-5: 271 76% 60%;
   }
 
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
 
   html {

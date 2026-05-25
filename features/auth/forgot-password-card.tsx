@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Mail, Send, Sparkles, WalletCards } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export function ForgotPasswordCard() {
@@ -70,16 +72,20 @@ export function ForgotPasswordCard() {
             <Send className="h-4 w-4" />
           </Button>
         </form>
-        <div className="mt-4 flex justify-end text-sm">
+
+        <Separator className="my-4" />
+
+        <div className="flex justify-end text-sm">
           <Link className="inline-flex items-center gap-2 font-medium text-primary hover:underline" href="/login">
             <ArrowLeft className="h-4 w-4" />
             Kembali ke login
           </Link>
         </div>
-        <p className="mt-4 flex items-start gap-2 rounded-md border bg-muted/80 p-3 text-sm font-semibold text-muted-foreground">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          {message}
-        </p>
+
+        <Alert className="mt-4 border-border bg-muted/80">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <AlertDescription className="font-semibold text-muted-foreground">{message}</AlertDescription>
+        </Alert>
       </CardContent>
     </Card>
   );

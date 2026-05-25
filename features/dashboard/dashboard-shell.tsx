@@ -21,6 +21,7 @@ import {
   Bell,
   BotMessageSquare,
   Check,
+  ChevronDown,
   Download,
   FolderPlus,
   LayoutDashboard,
@@ -42,13 +43,35 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip as TooltipRoot,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { formatCompactCurrency, formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -94,6 +117,20 @@ const emptyBudgetDraft = {
   amount: "",
   period: "monthly" as Budget["period"]
 };
+
+function IconButton({
+  tooltip,
+  ...props
+}: React.ComponentProps<typeof Button> & { tooltip: string }) {
+  return (
+    <TooltipRoot>
+      <TooltipTrigger asChild>
+        <Button size="icon" variant="ghost" aria-label={tooltip} {...props} />
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </TooltipRoot>
+  );
+}
 
 export function DashboardShell() {
   const router = useRouter();
@@ -545,9 +582,6 @@ export function DashboardShell() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button aria-label="Ekspor data" title="Ekspor data" variant="outline" size="icon" onClick={exportData}>
-                <Download className="h-4 w-4" />
-              </Button>
               <ThemeToggle />
               {authLoading ? (
                 <Button variant="secondary" className="hidden sm:inline-flex" disabled>
@@ -555,10 +589,27 @@ export function DashboardShell() {
                   Cek sesi
                 </Button>
               ) : user ? (
-                <Button variant="secondary" className="hidden sm:inline-flex" onClick={logout}>
-                  <LogOut className="h-4 w-4" />
-                  Keluar
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" className="hidden sm:inline-flex">
+                      {user.email?.split("@")[0] ?? "Akun"}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">{user.email}</div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={exportData}>
+                      <Download className="h-4 w-4" />
+                      Ekspor data
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                      <LogOut className="h-4 w-4" />
+                      Keluar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <Button asChild variant="secondary" className="hidden sm:inline-flex">
                   <Link href="/login">
@@ -567,28 +618,38 @@ export function DashboardShell() {
                   </Link>
                 </Button>
               )}
+              {!user && (
+                <IconButton tooltip="Ekspor data" variant="outline" onClick={exportData}>
+                  <Download className="h-4 w-4" />
+                </IconButton>
+              )}
             </div>
           </header>
 
           <div className="mx-auto w-full max-w-7xl space-y-5 p-4 md:p-6">
             {activeView === "dashboard" && (
               <>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/70 bg-card/78 p-3 text-sm font-semibold text-card-foreground shadow-soft backdrop-blur-xl dark:border-white/10">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/16 text-primary">
-                      {dataLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                <Alert className="border-white/70 bg-card/78 dark:border-white/10">
+                  <Bell className="h-4 w-4" />
+                  <AlertDescription className="flex items-center justify-between gap-3">
+                    <span className="font-semibold">
+                      {dataLoading ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {toast}
+                        </span>
+                      ) : toast}
                     </span>
-                    <span>{toast}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={remoteReady ? "success" : "warning"}>
-                      {remoteReady ? "Tersinkron" : "Data aktif"}
-                    </Badge>
-                    <Badge variant={metrics.budgetUsage > 80 ? "warning" : "success"}>
-                      Budget {metrics.budgetUsage}%
-                    </Badge>
-                  </div>
-                </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant={remoteReady ? "success" : "warning"}>
+                        {remoteReady ? "Tersinkron" : "Data aktif"}
+                      </Badge>
+                      <Badge variant={metrics.budgetUsage > 80 ? "warning" : "success"}>
+                        Budget {metrics.budgetUsage}%
+                      </Badge>
+                    </div>
+                  </AlertDescription>
+                </Alert>
 
                 <section className="grid gap-4 xl:grid-cols-[1.4fr_0.6fr]">
                   <div className="overflow-hidden rounded-lg border border-zinc-950 bg-zinc-950 text-white shadow-pop dark:border-white/10">
@@ -1025,19 +1086,22 @@ function TransactionForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Kategori</Label>
-            <select
-              id="category"
-              className="h-11 w-full rounded-md border border-input bg-background/76 px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <Label>Kategori</Label>
+            <Select
               value={form.categoryId}
-              onChange={(event) => onChange({ ...form, categoryId: event.target.value })}
+              onValueChange={(value) => onChange({ ...form, categoryId: value })}
             >
-              {filteredCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -1078,50 +1142,52 @@ function TransactionList({
         <CardDescription>Edit, hapus, dan cek sumber input transaksi.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {transactions.map((transaction) => {
-            const category = categoryById.get(transaction.categoryId);
-            return (
-              <div
-                key={transaction.id}
-                className="grid gap-3 rounded-lg border bg-background/52 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:bg-background/78 sm:grid-cols-[1fr_auto] sm:items-center"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: category?.color ?? "#10b981" }}
-                    />
-                    <p className="font-semibold">{transaction.notes}</p>
-                    <Badge variant={transaction.source === "whatsapp" ? "success" : "secondary"}>
-                      {transaction.source}
-                    </Badge>
+        <ScrollArea className="h-[420px] pr-3">
+          <div className="space-y-3">
+            {transactions.map((transaction) => {
+              const category = categoryById.get(transaction.categoryId);
+              return (
+                <div
+                  key={transaction.id}
+                  className="grid gap-3 rounded-lg border bg-background/52 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:bg-background/78 sm:grid-cols-[1fr_auto] sm:items-center"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: category?.color ?? "#10b981" }}
+                      />
+                      <p className="font-semibold">{transaction.notes}</p>
+                      <Badge variant={transaction.source === "whatsapp" ? "success" : "secondary"}>
+                        {transaction.source}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {category?.name ?? "Kategori"} - {formatDate(transaction.transactionDate)}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {category?.name ?? "Kategori"} - {formatDate(transaction.transactionDate)}
-                  </p>
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <p
+                      className={cn(
+                        "font-bold",
+                        transaction.type === "income" ? "text-emerald-600" : "text-foreground"
+                      )}
+                    >
+                      {transaction.type === "income" ? "+" : "-"}
+                      {formatCurrency(transaction.amount)}
+                    </p>
+                    <IconButton tooltip="Edit transaksi" onClick={() => onEdit(transaction)}>
+                      <Pencil className="h-4 w-4" />
+                    </IconButton>
+                    <IconButton tooltip="Hapus transaksi" onClick={() => onDelete(transaction.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </IconButton>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-3 sm:justify-end">
-                  <p
-                    className={cn(
-                      "font-bold",
-                      transaction.type === "income" ? "text-emerald-600" : "text-foreground"
-                    )}
-                  >
-                    {transaction.type === "income" ? "+" : "-"}
-                    {formatCurrency(transaction.amount)}
-                  </p>
-                  <Button aria-label="Edit transaksi" title="Edit transaksi" variant="ghost" size="icon" onClick={() => onEdit(transaction)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button aria-label="Hapus transaksi" title="Hapus transaksi" variant="ghost" size="icon" onClick={() => onDelete(transaction.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
@@ -1158,15 +1224,18 @@ function CategoryManager({
             onChange={(event) => onChange({ ...draft, name: event.target.value })}
             required
           />
-          <select
-            aria-label="Tipe kategori"
-            className="h-11 rounded-md border border-input bg-background/76 px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <Select
             value={draft.type}
-            onChange={(event) => onChange({ ...draft, type: event.target.value as TransactionType })}
+            onValueChange={(value) => onChange({ ...draft, type: value as TransactionType })}
           >
-            <option value="expense">Pengeluaran</option>
-            <option value="income">Pemasukan</option>
-          </select>
+            <SelectTrigger className="w-auto min-w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="expense">Pengeluaran</SelectItem>
+              <SelectItem value="income">Pemasukan</SelectItem>
+            </SelectContent>
+          </Select>
           <Button disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderPlus className="h-4 w-4" />}
             Tambah
@@ -1218,7 +1287,7 @@ function BudgetList({
           const progress = Math.round((spent / budget.amount) * 100);
 
           return (
-              <div key={budget.id} className="rounded-lg border bg-background/52 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/45">
+            <div key={budget.id} className="rounded-lg border bg-background/52 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/45">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{category?.name ?? "Budget"}</p>
@@ -1230,12 +1299,12 @@ function BudgetList({
               </div>
               <Progress value={progress} className="mt-4" />
               <div className="mt-4 flex justify-end gap-2">
-                <Button aria-label="Edit budget" title="Edit budget" variant="ghost" size="icon" onClick={() => onEdit(budget)}>
+                <IconButton tooltip="Edit budget" onClick={() => onEdit(budget)}>
                   <Pencil className="h-4 w-4" />
-                </Button>
-                <Button aria-label="Arsipkan budget" title="Arsipkan budget" variant="ghost" size="icon" onClick={() => onArchive(budget.id)}>
+                </IconButton>
+                <IconButton tooltip="Arsipkan budget" onClick={() => onArchive(budget.id)}>
                   <FolderPlus className="h-4 w-4" />
-                </Button>
+                </IconButton>
               </div>
             </div>
           );
@@ -1267,21 +1336,24 @@ function BudgetForm({
       <CardContent>
         <form className="space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="budget-category">Kategori</Label>
-            <select
-              id="budget-category"
-              className="h-11 w-full rounded-md border border-input bg-background/76 px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <Label>Kategori</Label>
+            <Select
               value={draft.categoryId}
-              onChange={(event) => onChange({ ...draft, categoryId: event.target.value })}
+              onValueChange={(value) => onChange({ ...draft, categoryId: value })}
             >
-              {categories
-                .filter((category) => category.type === "expense")
-                .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories
+                  .filter((category) => category.type === "expense")
+                  .map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="budget-amount">Nominal</Label>
@@ -1297,16 +1369,19 @@ function BudgetForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="budget-period">Periode</Label>
-            <select
-              id="budget-period"
-              className="h-11 w-full rounded-md border border-input bg-background/76 px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <Label>Periode</Label>
+            <Select
               value={draft.period}
-              onChange={(event) => onChange({ ...draft, period: event.target.value as Budget["period"] })}
+              onValueChange={(value) => onChange({ ...draft, period: value as Budget["period"] })}
             >
-              <option value="monthly">Bulanan</option>
-              <option value="weekly">Mingguan</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Bulanan</SelectItem>
+                <SelectItem value="weekly">Mingguan</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button className="w-full" disabled={loading}>
             {loading ? "Menyimpan..." : draft.id ? "Simpan budget" : "Buat budget"}
